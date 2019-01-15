@@ -85,8 +85,7 @@ DATABASES = {
     }
 }
 
-DATABASE_ROUTERS = ['mydb.dbrouter.MydbRouter']
-# 'db4app.dbrouter.PrimaryRouter',
+DATABASE_ROUTERS = ['db4app.dbrouter.DBRouter']
 
 
 # Password validation
