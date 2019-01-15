@@ -1,44 +1,54 @@
-class PrimaryRouter:
-
+class DBRouter:
+    """
+    A router to control all database operations on models in applications.
+    """
     @property
-    def exceptions(self):
+    def apps(self):
         return ['mydb']
 
     @property
-    def name(self):
+    def default_base(self):
         return 'default'
 
     def db_for_read(self, model, **hints):
         """
-        Reads go to a randomly-chosen replica.
+        Attempts to read models go to app's db.
         """
-        if model._meta.app_label == self.name:
-            return self.name
-        return None
+        if model._meta.app_label not in self.apps:
+            return self.default_base
+        elif model._meta.app_label in self.apps:
+            return model._meta.app_label
+        else:
+            return None
 
     def db_for_write(self, model, **hints):
         """
-        Writes always go to primary.
+        Attempts to write models go to app's db.
         """
-        if model._meta.app_label == self.name:
-            return self.name
-        return None
+        if model._meta.app_label not in self.apps:
+            return self.default_base
+        elif model._meta.app_label in self.apps:
+            return model._meta.app_label
+        else:
+            return None
 
     def allow_relation(self, obj1, obj2, **hints):
         """
-        Relations between objects are allowed if both objects are
-        in the primary/replica pool.
+        Allow relations if a model in the app is involved.
         """
-        if obj1._meta.app_label == self.name and obj2._meta.app_label == self.name:
+        if obj1._state.db == self.default_base or obj2._state.db == self.default_base:
             return True
-        return None
+        elif obj1._state.db == obj2._state.db:
+            return True
+        else:
+            return False
 
     def allow_migrate(self, db, app_label, model_name=None, **hints):
         """
-        All default models end up in this pool.
+        Make sure the app's models only appears in the app's database.
         """
-        if db in self.exceptions or app_label in self.exceptions:
-            return False
-
-        print('+++', db, model_name, hints)
-        return True
+        if db == app_label and app_label in self.apps:
+            return True
+        if db == self.default_base and app_label not in self.apps:
+            return True
+        return False
